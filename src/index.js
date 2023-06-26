@@ -1,35 +1,48 @@
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './css/styles.css';
-import Triangle from './js/triangle.js';
-import Rectangle from './js/rectangle.js';
 
-function handleTriangleForm() {
-  event.preventDefault();
-  document.querySelector('#response').innerText = null;
-  const length1 = parseInt(document.querySelector('#length1').value);
-  const length2 = parseInt(document.querySelector('#length2').value);
-  const length3 = parseInt(document.querySelector('#length3').value);
-  const triangle = new Triangle(length1, length2, length3);
-  const response = triangle.checkType();
-  const pTag = document.createElement("p");
-  pTag.append(`Your result is: ${response}.`);
-  document.querySelector('#response').append(pTag);
+// Business Logic
+
+function getWeather(zipcode) {
+  let request = new XMLHttpRequest();
+  const url = `http://api.openweathermap.org/data/2.5/weather?zip=${zipcode}&units=imperial&appid=${process.env.API_KEY}`;
+  request.addEventListener("readystatechange", function() {
+    console.log(this.readyState);
+  });
+
+  request.addEventListener("loadend", function() {
+      const response = JSON.parse(this.responseText);
+      if (this.status === 200) {
+        printElements(response, zipcode);
+      } else {
+        printError(this, response, zipcode);
+      }
+    });
+
+  request.open("GET", url, true);
+  request.send();
 }
 
-function handleRectangleForm() {
+// UI Logic
+
+function printError(request, apiResponse, zipcode) {
+  document.querySelector('#showResponse').innerText = `There was an error accessing the weather data for ${zipcode}:  ${request.status} ${request.statusText}: ${apiResponse.message}`;
+}
+
+function printElements(apiResponse, zipcode) {
+  let sunset = new Date((apiResponse.sys.sunset + apiResponse.timezone) * 1000).toISOString().substring(11,16);
+  document.querySelector('#showResponse').innerText = `The humidity in ${zipcode} is ${apiResponse.main.humidity}%.
+  The temperature in Fahrenheit is ${apiResponse.main.temp} degrees. \nThe visbility is ${apiResponse.visibility} meters. The sunset will set at ${sunset}`;
+}
+
+function handleFormSubmission(event) {
   event.preventDefault();
-  document.querySelector('#response2').innerText = null;
-  const length1 = parseInt(document.querySelector('#rect-length1').value);
-  const length2 = parseInt(document.querySelector('#rect-length2').value);
-  const rectangle = new Rectangle(length1, length2);
-  const response = rectangle.getArea();
-  const pTag = document.createElement("p");
-  pTag.append(`The area of the rectangle is ${response}.`);
-  document.querySelector('#response2').append(pTag);
+  const zipcode = document.querySelector('#location').value;
+  document.querySelector('#location').value = null;
+  getWeather(zipcode);
 }
 
 window.addEventListener("load", function() {
-  document.querySelector("#triangle-checker-form").addEventListener("submit", handleTriangleForm);
-  document.querySelector("#rectangle-area-form").addEventListener("submit", handleRectangleForm);
+  document.querySelector('form').addEventListener("submit", handleFormSubmission);
 });
